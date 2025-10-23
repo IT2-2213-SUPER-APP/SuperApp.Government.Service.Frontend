@@ -1,0 +1,48 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FileForum{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tahoma:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header with Glassy Effect -->
+        <header class="main-header">
+            <div class="logo">
+                <h1><a href="/">FileForum</a></h1>
+            </div>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="/" class="nav-button">Home</a></li>
+                    <li><a href="#" class="nav-button">Upload</a></li>
+                    {% if user.is_authenticated %}
+                        <li><a href="#" class="nav-button">{{ user.username }}</a></li>
+                        <li><a href="#" class="nav-button">Logout</a></li>
+                    {% else %}
+                        <li><a href="#" class="nav-button">Login</a></li>
+                        <li><a href="#" class="nav-button">Register</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="content">
+            {% block content %}
+                <!-- Page-specific content will be injected here -->
+            {% endblock %}
+        </main>
+
+        <!-- Footer -->
+        <footer class="main-footer">
+            <p>&copy; 2025 FileForum. All rights reserved.</p>
+        </footer>
+    </div>
+</body>
+</html>

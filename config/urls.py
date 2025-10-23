@@ -21,6 +21,11 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
+    # --- Frontend URL Patterns ---
+    # This routes the root URL ('/') and other core pages to the 'core' app.
+    path('', include('core.urls')),
+
+    # --- Admin Panel ---
     path('admin/', admin.site.urls),
 
     # --- API URL Patterns ---

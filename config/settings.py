@@ -53,6 +53,8 @@ INSTALLED_APPS = [
     'submissions',
     'comments',
     'messaging',
+
+    'core'
 ]
 
 MIDDLEWARE = [
