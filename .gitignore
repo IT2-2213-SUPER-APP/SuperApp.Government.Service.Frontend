@@ -1,0 +1,61 @@
+prompt.md
+context/
+
+# PYTHON
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# VIRTUALENV
+.venv
+venv/
+env/
+include/
+pip-selfcheck.json
+pip-log.txt
+
+# POETRY
+.poetry-virtualenvs/
+poetry.lock
+
+# ENVIRONMENT VARIABLES
+.env*
+
+# DJANGO
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+static/
+
+# IDES AND EDITORS
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# TESTING
+.pytest_cache/
+.coverage
+htmlcov/
