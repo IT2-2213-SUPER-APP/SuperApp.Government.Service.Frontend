@@ -20,6 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
+# It's recommended to load this from an environment variable using python-decouple
 SECRET_KEY = "django-insecure-5di%7s5mfz07%)kz==u=l34mq68$)8$(ijr#%c61idic^-avnf"
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -37,11 +38,25 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+
+    # --- Third-Party Apps ---
+    'rest_framework',       # Core framework for building Web APIs
+    'corsheaders',          # For handling Cross-Origin Resource Sharing (CORS)
+    'guardian',             # For object-level permissions
+    'safedelete',           # For soft-deleting models
+    'django_filters',       # For filtering querysets in the API
+
+    # --- Your Local Apps ---
+    'users',                # Manages user accounts, profiles, etc.
+    'submissions',          # Manages file submissions and related logic
+    'comments',             # Manages comments on submissions
+    'messaging',            # Manages private messaging
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",  # Add CorsMiddleware here
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -54,7 +69,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / 'templates'], # Add a project-level templates directory
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -116,8 +131,60 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = "static/"
+# Add a project-level static files directory
+STATICFILES_DIRS = [BASE_DIR / "static"]
+
+
+# Media files (User-uploaded content)
+# This is where files uploaded by users will be stored.
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# --- Custom Project Settings ---
+
+# Custom User Model
+# Tells Django to use our custom User model from the 'users' app.
+# IMPORTANT: This should be set before the first migration.
+AUTH_USER_MODEL = 'users.User'
+
+
+# Django Guardian Settings
+# Required for object-level permissions.
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend', # default
+    'guardian.backends.ObjectPermissionBackend',
+)
+
+# CORS (Cross-Origin Resource Sharing) Settings
+# For development, allow all origins to access the API.
+# In production, you should restrict this to your frontend's domain.
+CORS_ALLOW_ALL_ORIGINS = True
+
+
+# Django REST Framework Settings
+REST_FRAMEWORK = {
+    # Default permission policy: allow read-only access for anyone,
+    # but require authentication for write operations (POST, PUT, DELETE).
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ],
+    # Use session authentication for browsing the API and for web clients.
+    # We can add JWT for mobile/headless clients later.
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    # Enable filtering capabilities across the API.
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend'
+    ],
+    # Enable pagination to avoid sending huge lists of data.
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10  # Number of items per page
+}
