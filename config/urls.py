@@ -22,10 +22,16 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # Include the URLs from the submissions app under the 'api/' prefix
-    path('api/', include('submissions.urls')),
-    # You can add other app URLs here later
-    # path('api/', include('users.urls')),
+
+    # --- API URL Patterns ---
+    # All submission-related endpoints will be under /api/submissions/
+    path('api/submissions/', include('submissions.urls')),
+
+    # All user-related endpoints (register, login, profile) will be under /api/users/
+    path('api/users/', include('users.urls')),
+
+    # This provides the login/logout views for the browsable DRF API
+    path('api-auth/', include('rest_framework.urls')),
 ]
 
 # This is important for serving user-uploaded files during development

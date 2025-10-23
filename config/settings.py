@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+from datetime import timedelta ### UPDATED: Import timedelta for JWT settings
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -40,23 +41,24 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
 
     # --- Third-Party Apps ---
-    'rest_framework',       # Core framework for building Web APIs
-    'corsheaders',          # For handling Cross-Origin Resource Sharing (CORS)
-    'guardian',             # For object-level permissions
-    'safedelete',           # For soft-deleting models
-    'django_filters',       # For filtering querysets in the API
+    'rest_framework',
+    'rest_framework_simplejwt', ### UPDATED: Add simplejwt for token authentication
+    'corsheaders',
+    'guardian',
+    'safedelete',
+    'django_filters',
 
     # --- Your Local Apps ---
-    'users',                # Manages user accounts, profiles, etc.
-    'submissions',          # Manages file submissions and related logic
-    'comments',             # Manages comments on submissions
-    'messaging',            # Manages private messaging
+    'users',
+    'submissions',
+    'comments',
+    'messaging',
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "corsheaders.middleware.CorsMiddleware",  # Add CorsMiddleware here
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -69,7 +71,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / 'templates'], # Add a project-level templates directory
+        "DIRS": [BASE_DIR / 'templates'],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -131,60 +133,90 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = "static/"
-# Add a project-level static files directory
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
 
 # Media files (User-uploaded content)
-# This is where files uploaded by users will be stored.
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 
 # Default primary key field type
-# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 # --- Custom Project Settings ---
 
 # Custom User Model
-# Tells Django to use our custom User model from the 'users' app.
-# IMPORTANT: This should be set before the first migration.
 AUTH_USER_MODEL = 'users.User'
 
 
 # Django Guardian Settings
-# Required for object-level permissions.
 AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend', # default
+    'django.contrib.auth.backends.ModelBackend',
     'guardian.backends.ObjectPermissionBackend',
 )
 
 # CORS (Cross-Origin Resource Sharing) Settings
-# For development, allow all origins to access the API.
-# In production, you should restrict this to your frontend's domain.
 CORS_ALLOW_ALL_ORIGINS = True
 
 
 # Django REST Framework Settings
 REST_FRAMEWORK = {
-    # Default permission policy: allow read-only access for anyone,
-    # but require authentication for write operations (POST, PUT, DELETE).
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
-    # Use session authentication for browsing the API and for web clients.
-    # We can add JWT for mobile/headless clients later.
+    ### UPDATED: Set JWT as the default authentication scheme for the API.
+    # SessionAuthentication is kept to allow logging into the browsable API.
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
-    # Enable filtering capabilities across the API.
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend'
     ],
-    # Enable pagination to avoid sending huge lists of data.
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10  # Number of items per page
+    'PAGE_SIZE': 10
+}
+
+### UPDATED: Add settings for Simple JWT
+# This block configures the behavior of the JSON Web Tokens.
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "ROTATE_REFRESH_TOKENS": False,
+    "BLACKLIST_AFTER_ROTATION": False,
+    "UPDATE_LAST_LOGIN": False,
+
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY,
+    "VERIFYING_KEY": "",
+    "AUDIENCE": None,
+    "ISSUER": None,
+    "JSON_ENCODER": None,
+    "JWK_URL": None,
+    "LEEWAY": 0,
+
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
+    "USER_AUTHENTICATION_RULE": "rest_framework_simplejwt.authentication.default_user_authentication_rule",
+
+    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+    "TOKEN_TYPE_CLAIM": "token_type",
+    "TOKEN_USER_CLASS": "rest_framework_simplejwt.models.TokenUser",
+
+    "JTI_CLAIM": "jti",
+
+    "SLIDING_TOKEN_REFRESH_EXP_CLAIM": "refresh_exp",
+    "SLIDING_TOKEN_LIFETIME": timedelta(minutes=5),
+    "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=1),
+
+    "TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.TokenObtainPairSerializer",
+    "TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSerializer",
+    "TOKEN_VERIFY_SERIALIZER": "rest_framework_simplejwt.serializers.TokenVerifySerializer",
+    "TOKEN_BLACKLIST_SERIALIZER": "rest_framework_simplejwt.serializers.TokenBlacklistSerializer",
+    "SLIDING_TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.TokenObtainSlidingSerializer",
+    "SLIDING_TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSlidingSerializer",
 }
