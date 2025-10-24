@@ -64,14 +64,14 @@ class SubmissionSerializer(serializers.ModelSerializer):
             'description',
             'owner',
             'visibility',
-            'short_link',
+            'slug',
             'files',  # The nested list of files
             'created_at',
             'updated_at',
         ]
         # Mark fields that should not be editable by the client as read-only.
         read_only_fields = [
-            'short_link',
+            'slug',
             'created_at',
             'updated_at',
         ]

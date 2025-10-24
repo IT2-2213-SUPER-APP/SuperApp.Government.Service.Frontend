@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta ### UPDATED: Import timedelta for JWT settings
+from decouple import config, Csv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -22,12 +23,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # It's recommended to load this from an environment variable using python-decouple
-SECRET_KEY = "django-insecure-5di%7s5mfz07%)kz==u=l34mq68$)8$(ijr#%c61idic^-avnf"
+SECRET_KEY = config("SECRET_KEY", default="insecure-change-me")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config("DEBUG", default=True, cast=bool)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
+ENV = config("ENV", default="dev")
 
 
 # Application definition
@@ -47,6 +49,7 @@ INSTALLED_APPS = [
     'guardian',
     'safedelete',
     'django_filters',
+    'django_celery_beat',
 
     # --- Your Local Apps ---
     'users',
@@ -94,8 +97,13 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": config("POSTGRES_DB", default="file_forum"),
+        "USER": config("POSTGRES_USER", default="file_forum_user"),
+        "PASSWORD": config("POSTGRES_PASSWORD", default="file_forum_pass"),
+        "HOST": config("POSTGRES_HOST", default="localhost"),
+        "PORT": config("POSTGRES_PORT", default=5432, cast=int),
+        "CONN_MAX_AGE": 60,
     }
 }
 
@@ -139,8 +147,8 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 
 
 # Media files (User-uploaded content)
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = config("MEDIA_URL", default="/media/")
+MEDIA_ROOT = config("MEDIA_ROOT", default=str(BASE_DIR / "media"))
 
 
 # Default primary key field type
@@ -221,4 +229,39 @@ SIMPLE_JWT = {
     "TOKEN_BLACKLIST_SERIALIZER": "rest_framework_simplejwt.serializers.TokenBlacklistSerializer",
     "SLIDING_TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.TokenObtainSlidingSerializer",
     "SLIDING_TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSlidingSerializer",
+}
+
+# --- Project environment-driven settings ---
+# Short link / slug settings
+DEFAULT_SLUG_LENGTH = config("DEFAULT_SLUG_LENGTH", default=8, cast=int)
+RESERVED_SLUGS = set(config("RESERVED_SLUGS", default="s,admin,api,users,submissions,comments,messages,static,media,login,logout,register,profile,docs,help,terms,privacy", cast=Csv()))
+
+# Rate Limits (cooldowns)
+SUBMISSION_CREATE_COOLDOWN_SECONDS = config("SUBMISSION_CREATE_COOLDOWN_SECONDS", default=32, cast=int)
+SUBMISSION_EDIT_COOLDOWN_SECONDS = config("SUBMISSION_EDIT_COOLDOWN_SECONDS", default=16, cast=int)
+COMMENT_COOLDOWN_SECONDS = config("COMMENT_COOLDOWN_SECONDS", default=8, cast=int)
+MESSAGE_COOLDOWN_SECONDS = config("MESSAGE_COOLDOWN_SECONDS", default=2, cast=int)
+
+# Markdown sanitization
+MARKDOWN_ALLOWED_TAGS = set(config("MARKDOWN_ALLOWED_TAGS", default="p,a,ul,ol,li,em,strong,code,pre,blockquote,hr,br,h1,h2,h3,h4,h5,h6", cast=Csv()))
+MARKDOWN_ALLOWED_ATTRS = {
+    "a": set(config("MARKDOWN_ALLOWED_ATTRS", default="a:href,a:title", cast=Csv()))
+}
+
+# Celery/Redis
+CELERY_BROKER_URL = config("REDIS_URL", default="redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = config("REDIS_URL", default="redis://localhost:6379/0")
+CELERY_TASK_ALWAYS_EAGER = False
+CELERY_TIMEZONE = "UTC"
+
+from celery.schedules import crontab
+CELERY_BEAT_SCHEDULE = {
+    "weekly_soft_delete_cleanup": {
+        "task": "core.tasks.cleanup_soft_deleted",
+        "schedule": crontab(minute=0, hour=0, day_of_week="sun"),
+    },
+    "weekly_recalc_trending": {
+        "task": "submissions.tasks.recalculate_trending",
+        "schedule": crontab(minute=5, hour=0, day_of_week="sun"),
+    },
 }

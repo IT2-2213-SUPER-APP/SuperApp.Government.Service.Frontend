@@ -17,15 +17,16 @@
                     <div class="arrow down"></div>
                 </div>
                 <div class="submission-details">
-                    <h3 class="submission-title"><a href="#">{{ submission.title }}</a></h3>
+                    <!-- UPDATED LINK -->
+                    <h3 class="submission-title"><a href="{% url 'submission_slug_detail' submission.slug %}">{{ submission.title }}</a></h3>
                     <p class="submission-meta">
                         Submitted on {{ submission.created_at|date:"F d, Y" }} by
                         <strong>{{ submission.owner.username }}</strong>
                     </p>
                     <p class="submission-description">{{ submission.description|truncatewords:30 }}</p>
                     <div class="submission-actions">
-                        <a href="#">{{ submission.files.count }} File(s)</a> |
-                        <a href="#">Comments</a> |
+                        <a href="{% url 'submission_slug_detail' submission.slug %}">{{ submission.files.count }} File(s)</a> |
+                        <a href="{% url 'submission_slug_detail' submission.slug %}#comments">Comments</a> |
                         <a href="#">Share</a> |
                         <a href="#">Report</a>
                     </div>

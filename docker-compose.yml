@@ -1,0 +1,24 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: file_forum_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-file_forum}
+      POSTGRES_USER: ${POSTGRES_USER:-file_forum_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-file_forum_pass}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Volumes are optional; uncomment to persist data between runs
+    # volumes:
+    #   - pgdata:/var/lib/postgresql/data
+
+# volumes:
+#   pgdata:

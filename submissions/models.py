@@ -1,12 +1,14 @@
-import shortuuid
 from django.conf import settings
 from django.db import models
 from safedelete.models import SafeDeleteModel, SOFT_DELETE_CASCADE
+from django.db.models import UniqueConstraint
+from django.db.models.functions import Lower
+from django.core.exceptions import ValidationError
+from .validators import validate_reserved_slug, validate_custom_slug_format
+from .utils import generate_unique_slug
 
-
-def generate_short_link():
-    """Generates a unique short identifier for the submission URL."""
-    return shortuuid.uuid()
+def default_slug():
+    return generate_unique_slug()
 
 
 class Submission(SafeDeleteModel):
@@ -35,17 +37,29 @@ class Submission(SafeDeleteModel):
         default=Visibility.PUBLIC,
         db_index=True  # Add index for faster filtering on visibility
     )
-    short_link = models.CharField(
-        max_length=22,
-        default=generate_short_link,
+    slug = models.CharField(
+        max_length=32,
         unique=True,
-        editable=False
+        db_index=True,
+        default=default_slug,
+        validators=[validate_reserved_slug, validate_custom_slug_format],
     )
+    registered_only = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-created_at']  # Show newest submissions first
+        constraints = [
+            UniqueConstraint(Lower('slug'), name='submission_slug_unique_ci')
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = default_slug()
+        # Run field validators (including reserved slug)
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f'"{self.title}" by {self.owner.username}'

@@ -29,11 +29,16 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     # --- API URL Patterns ---
-    # All submission-related endpoints will be under /api/submissions/
-    path('api/submissions/', include('submissions.urls')),
+    # UPDATED: Changed prefix to '/api/' to better accommodate nested routes.
+    # This will now handle URLs like /api/submissions/ and /api/submissions/{id}/comments/
+    path('api/', include('submissions.urls')),
 
     # All user-related endpoints (register, login, profile) will be under /api/users/
     path('api/users/', include('users.urls')),
+
+    # NEW: Added URL patterns for the private messaging API.
+    # This will create endpoints like /api/messages/
+    path('api/', include('messaging.urls')),
 
     # This provides the login/logout views for the browsable DRF API
     path('api-auth/', include('rest_framework.urls')),

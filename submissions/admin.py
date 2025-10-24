@@ -25,13 +25,20 @@ class SubmissionAdmin(SafeDeleteAdmin):
         'title',
         'owner',
         'visibility',
-        'short_link',
+        'slug',
+        'registered_only',
         'created_at',
     )
     search_fields = ('title', 'owner__username')
-    list_filter = ('visibility', 'deleted', 'created_at')
-    readonly_fields = ('short_link', 'created_at', 'updated_at')
+    list_filter = ('visibility', 'registered_only', 'deleted', 'created_at')
+    readonly_fields = ('created_at', 'updated_at')
     inlines = [SubmissionFileInline]  # Nest the file editor
+
+    def get_readonly_fields(self, request, obj=None):
+        ro = list(super().get_readonly_fields(request, obj))
+        if not request.user.is_superuser:
+            ro.append('slug')
+        return ro
 
 
 @admin.register(SubmissionFile)
