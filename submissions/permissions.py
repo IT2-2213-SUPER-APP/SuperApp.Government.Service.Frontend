@@ -1,4 +1,5 @@
 from rest_framework import permissions
+from .models import SubmissionMember
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
     """
@@ -7,10 +8,17 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
     """
 
     def has_object_permission(self, request, view, obj):
-        # Read permissions are allowed for any request,
-        # so we'll always allow GET, HEAD, or OPTIONS requests.
         if request.method in permissions.SAFE_METHODS:
             return True
-
-        # Write permissions are only allowed to the owner of the submission.
         return obj.owner == request.user
+
+
+class IsOwnerOrEditor(permissions.BasePermission):
+    """Allow write for owner or editors; read for safe methods."""
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        if request.user == obj.owner:
+            return True
+        return SubmissionMember.is_editor(request.user, obj)

@@ -1,5 +1,5 @@
 from rest_framework_nested import routers
-from .views import SubmissionFileViewSet, SubmissionViewSet
+from .views import SubmissionFileViewSet, SubmissionViewSet, FolderViewSet
 from comments.views import CommentViewSet
 
 # Create a main router
@@ -9,6 +9,7 @@ router.register(r'submissions', SubmissionViewSet, basename='submission')
 # Create a nested router for files within submissions
 submissions_router = routers.NestedSimpleRouter(router, r'submissions', lookup='submission')
 submissions_router.register(r'files', SubmissionFileViewSet, basename='submission-files')
+submissions_router.register(r'folders', FolderViewSet, basename='submission-folders')
 
 # --- UPDATED: Nest comments under submissions ---
 submissions_router.register(r'comments', CommentViewSet, basename='submission-comments')

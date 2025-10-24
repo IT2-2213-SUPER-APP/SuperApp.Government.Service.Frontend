@@ -1,7 +1,7 @@
 from django.contrib import admin
 from safedelete.admin import SafeDeleteAdmin, highlight_deleted
 
-from .models import Submission, SubmissionFile
+from .models import Submission, SubmissionFile, SubmissionReport
 
 
 class SubmissionFileInline(admin.TabularInline):
@@ -50,3 +50,10 @@ class SubmissionFileAdmin(admin.ModelAdmin):
     search_fields = ('submission__title',)
     list_filter = ('uploaded_at',)
     readonly_fields = ('uploaded_at',)
+
+
+@admin.register(SubmissionReport)
+class SubmissionReportAdmin(admin.ModelAdmin):
+    list_display = ("id","submission","reporter","status","created_at")
+    list_filter = ("status","created_at")
+    search_fields = ("submission__title","reporter__username","reason")

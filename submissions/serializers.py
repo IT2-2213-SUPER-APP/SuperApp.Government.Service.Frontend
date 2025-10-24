@@ -1,18 +1,16 @@
 from rest_framework import serializers
+import markdown as md
+import bleach
+from django.conf import settings
 
-from .models import Submission, SubmissionFile
+from .models import Submission, SubmissionFile, submission_vote_stats, Folder
 
 
 class SubmissionFileSerializer(serializers.ModelSerializer):
-    """
-    Serializer for the SubmissionFile model.
-
-    Handles the serialization of file objects, providing the file URL
-    and upload timestamp. The `submission` field is implicitly handled by the
-    nested URL structure in the viewset, so it's not included here.
-    """
-    # Use SerializerMethodField to return the full URL of the file.
     file_url = serializers.SerializerMethodField()
+    folder_id = serializers.PrimaryKeyRelatedField(
+        queryset=Folder.objects.all(), source='folder', required=False, allow_null=True
+    )
 
     class Meta:
         model = SubmissionFile
@@ -20,22 +18,35 @@ class SubmissionFileSerializer(serializers.ModelSerializer):
             'id',
             'file',
             'file_url',
-            'uploaded_at'
+            'uploaded_at',
+            'folder_id',
         ]
-        # The 'file' field is write-only because we want to receive the upload,
-        # but we will serve the URL via 'file_url'.
         extra_kwargs = {
             'file': {'write_only': True}
         }
 
+    def validate(self, attrs):
+        submission = self.context.get('submission')
+        folder = attrs.get('folder')
+        if folder and folder.submission_id != submission.id:
+            raise serializers.ValidationError({'folder_id': 'Folder must belong to this submission.'})
+        return attrs
+
     def get_file_url(self, obj):
-        """
-        Returns the absolute URL for the file.
-        """
         request = self.context.get('request')
         if request and obj.file:
             return request.build_absolute_uri(obj.file.url)
         return None
+
+
+class FolderSerializer(serializers.ModelSerializer):
+    parent_id = serializers.PrimaryKeyRelatedField(
+        queryset=Folder.objects.all(), source='parent', required=False, allow_null=True
+    )
+
+    class Meta:
+        model = Folder
+        fields = ['id', 'name', 'parent_id', 'created_at']
 
 
 class SubmissionSerializer(serializers.ModelSerializer):
@@ -46,15 +57,10 @@ class SubmissionSerializer(serializers.ModelSerializer):
     files, and other metadata. It uses a nested serializer to display a list
     of files within the submission.
     """
-    # Make the owner field read-only and display the username for clarity.
     owner = serializers.ReadOnlyField(source='owner.username')
-
-    # Use the SubmissionFileSerializer to nest the associated files.
-    # This will render a list of file objects within the submission JSON.
-    # `many=True` indicates it's a list of objects.
-    # `read_only=True` means you cannot create/update files through this serializer;
-    # that is handled by the dedicated SubmissionFileViewSet.
     files = SubmissionFileSerializer(many=True, read_only=True)
+    description_html = serializers.SerializerMethodField()
+    rating = serializers.SerializerMethodField()
 
     class Meta:
         model = Submission
@@ -62,20 +68,32 @@ class SubmissionSerializer(serializers.ModelSerializer):
             'id',
             'title',
             'description',
+            'description_html',
             'owner',
             'visibility',
             'slug',
-            'files',  # The nested list of files
+            'files',
+            'rating',
             'created_at',
             'updated_at',
         ]
-        # Mark fields that should not be editable by the client as read-only.
         read_only_fields = [
             'slug',
             'created_at',
             'updated_at',
+            'rating',
+            'description_html',
         ]
 
+    def get_description_html(self, obj):
+        raw = obj.description or ""
+        html = md.markdown(raw, extensions=["extra"])
+        allowed_tags = getattr(settings, "MARKDOWN_ALLOWED_TAGS", {"p","a","em","strong"})
+        allowed_attrs = getattr(settings, "MARKDOWN_ALLOWED_ATTRS", {"a": {"href","title"}})
+        return bleach.clean(html, tags=allowed_tags, attributes=allowed_attrs, strip=True)
+
+    def get_rating(self, obj):
+        return submission_vote_stats(obj)
     def create(self, validated_data):
         """
         Create and return a new `Submission` instance, given the validated data.

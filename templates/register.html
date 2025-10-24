@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}Register - FileForum{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <h2>Register</h2>
+  <p>Create an account. Use the token page to log in.</p>
+</div>
+
+<form id="register-form" onsubmit="return false;" style="max-width:480px;">
+  {% csrf_token %}
+  <label>Username</label>
+  <input type="text" id="username" class="nav-button" style="width:100%;margin:6px 0;">
+  <label>Email</label>
+  <input type="email" id="email" class="nav-button" style="width:100%;margin:6px 0;">
+  <label>Password</label>
+  <input type="password" id="password" class="nav-button" style="width:100%;margin:6px 0;">
+  <label>Confirm Password</label>
+  <input type="password" id="password2" class="nav-button" style="width:100%;margin:6px 0;">
+  <button class="nav-button" onclick="registerUser()">Register</button>
+</form>
+
+<pre id="register-result" style="margin-top:12px;white-space:pre-wrap;"></pre>
+
+<script>
+async function registerUser() {
+  const resEl = document.getElementById('register-result');
+  resEl.textContent = 'Registering...';
+  const payload = {
+    username: document.getElementById('username').value,
+    email: document.getElementById('email').value,
+    password: document.getElementById('password').value,
+    password2: document.getElementById('password2').value
+  };
+  try {
+    const resp = await fetch('/api/users/register/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+      resEl.textContent = JSON.stringify(data, null, 2);
+      return;
+    }
+    resEl.textContent = 'Registration successful. You can now go to Login to obtain a token.';
+  } catch (e) {
+    resEl.textContent = 'Error: ' + e;
+  }
+}
+</script>
+{% endblock %}

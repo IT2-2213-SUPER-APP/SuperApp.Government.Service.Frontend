@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - FileForum{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <h2>Login</h2>
+  <p>Obtain a JWT access token to use the API.</p>
+</div>
+
+<form id="login-form" onsubmit="return false;" style="max-width:480px;">
+  {% csrf_token %}
+  <label>Username</label>
+  <input type="text" id="username" class="nav-button" style="width:100%;margin:6px 0;">
+  <label>Password</label>
+  <input type="password" id="password" class="nav-button" style="width:100%;margin:6px 0;">
+  <button class="nav-button" onclick="login()">Login</button>
+</form>
+
+<pre id="login-result" style="margin-top:12px;white-space:pre-wrap;"></pre>
+
+<script>
+async function login() {
+  const resEl = document.getElementById('login-result');
+  resEl.textContent = 'Logging in...';
+  const payload = {
+    username: document.getElementById('username').value,
+    password: document.getElementById('password').value
+  };
+  try {
+    const resp = await fetch('/api/users/token/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+      resEl.textContent = JSON.stringify(data, null, 2);
+      return;
+    }
+    // Store tokens (for demo only). In production use httpOnly cookies or secure storage.
+    localStorage.setItem('ff_access', data.access);
+    localStorage.setItem('ff_refresh', data.refresh);
+    resEl.textContent = 'Login successful. Access token stored in localStorage.';
+  } catch (e) {
+    resEl.textContent = 'Error: ' + e;
+  }
+}
+</script>
+{% endblock %}

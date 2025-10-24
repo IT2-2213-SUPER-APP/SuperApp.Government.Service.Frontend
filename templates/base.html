@@ -19,12 +19,10 @@
                     <li><a href="{% url 'upload' %}" class="nav-button">Upload</a></li>
                     {% if user.is_authenticated %}
                         <li><a href="#" class="nav-button">{{ user.username }}</a></li>
-                        <!-- Point this to your logout URL -->
                         <li><a href="/admin/logout/" class="nav-button">Logout</a></li>
                     {% else %}
-                        <!-- Point these to your login/register URLs -->
-                        <li><a href="/admin/login/" class="nav-button">Login</a></li>
-                        <li><a href="#" class="nav-button">Register</a></li>
+                        <li><a href="{% url 'login' %}" class="nav-button">Login</a></li>
+                        <li><a href="{% url 'register' %}" class="nav-button">Register</a></li>
                     {% endif %}
                 </ul>
             </nav>

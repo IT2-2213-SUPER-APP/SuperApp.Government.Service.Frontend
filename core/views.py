@@ -33,9 +33,16 @@ def can_view_submission(user, submission: Submission):
         if getattr(submission, 'registered_only', False) and not user.is_authenticated:
             return False
         return True
-    if user.is_authenticated and user == submission.owner:
-        return True
-    # Editors/viewers logic can be added later
+    if user.is_authenticated:
+        if user == submission.owner:
+            return True
+        # Allow editors/viewers
+        try:
+            from submissions.models import SubmissionMember
+            if SubmissionMember.is_viewer(user, submission):
+                return True
+        except Exception:
+            pass
     return False
 
 
@@ -63,3 +70,13 @@ def upload_view(request):
     Placeholder view for the file upload page.
     """
     return render(request, 'upload.html')
+
+
+def login_view(request):
+    """Render a minimal login page that posts to /api/users/token/."""
+    return render(request, 'login.html')
+
+
+def register_view(request):
+    """Render a minimal register page that posts to /api/users/register/."""
+    return render(request, 'register.html')

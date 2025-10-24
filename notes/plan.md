@@ -1,7 +1,67 @@
-# CONTENTS
+# PLANS
+# FIRST MESSAGE
+QUESTION
+```md
+Assumptions I’d like you to confirm or adjust
+Environment and tooling
+1) Python version: .python-version is 3.11.14. OK to target that with pyenv and poetry?
+2) Database: Keep sqlite3 for development for now, with psycopg2 available for future Postgres? Or should we switch dev to Postgres immediately?
+3) Redis: OK to require a local Redis instance for Celery (e.g., redis://localhost:6379/0)?
+4) Storage: Use local filesystem in dev; add optional S3 configuration via env (AWS keys/bucket/region) for production? Should we wire S3 now or leave as optional docs?
 
-CONVERSATION ANSWER HISTORY...
+Feature priorities and scope
+5) Voting: Implement submission upvote/downvote next (with per-user vote model, score aggregation, endpoints, and basic rate-limiting)?
+6) Reporting: Replace the placeholder with a Report model and a Celery task to notify admins (email/log) and admin UI to triage reports?
+7) File editing: Should “edit files” mean renaming or replacing the file binary (or both)? Any size/type limits to enforce?
+8) Link-only access: Do you want a public route like /s/<short_link>/ that allows viewing when visibility=link_only? Also confirm a .env SHORTLINK_BASE_URL to generate shareable links.
+9) Permissions: Beyond owner/guardian “change_submission”, should we add per-user allowlists for private/link_only submissions, or is owner-only sufficient?
+10) Rate limits: Any specific limits to enforce per endpoint (uploads, comments create, votes, messages)? For example: 5/min for submissions (already), 10/min for comments, 20/min for votes, 10/min for messages.
+11) Scheduling: What periodic jobs do you want? Examples:
+•  Digest/summary emails (optional)
+•  Clean up soft-deleted records after N days
+•  Cleanup old reports or flagged content queue
+•  Recalculate trending submissions
+12) Admin/UX:
+•  Should we add admin registration for User/Profile?
+•  Should we auto-create Profile via signals for any user (including createsuperuser)?
+•  Frontend: keep minimal templates for now, or wire login/register UI?
 
+Project ops and docs
+13) README: OK to replace with a full setup guide (pyenv, poetry, env vars, migrations, runserver, Celery worker/beat, formatting/testing, reset/flush)?
+14) flush.sh: OK to make it safer (rm -f, confirmation guard), and to add standard commands for full reset and re-seeding an admin user?
+
+What I will include in the finalized plan (once you confirm the above)
+•  A prioritized worklist covering:
+◦  Fix messaging permission bug.
+◦  Voting model, endpoints, and tests.
+◦  Reporting model, Celery task, admin, and tests.
+◦  File edit/replace support and validations.
+◦  Link-only short link route and env-based base URL.
+◦  Celery/Redis config (broker/result in .env), add django_celery_beat, and at least one scheduled task.
+◦  Optional S3 storage config behind env flags.
+◦  Rate-limiting on comments/files/messages/votes.
+◦  Admin setup for users/profile; signals to auto-create profile.
+◦  Safer flush.sh and a comprehensive README with pyenv/poetry/black/pytest/migrations/reset/run instructions.
+•  The exact terminal commands to:
+◦  Set up Python via pyenv and install dependencies via poetry.
+◦  Create and populate a .env file (example provided).
+◦  Run migrations, superuser creation, dev server.
+◦  Start Celery worker and beat.
+◦  Format/lint/test.
+◦  Reset/flush safely (with the improved script).
+•  Migration steps and notes for when database structure changes.
+•  Any minimal fixture data or smoke-test commands (curl/httpie) to verify key endpoints.
+
+Key files I inspected to derive this:
+•  prompt.md (overall requirements and instructions)
+•  pyproject.toml (dependencies and dev tools)
+•  config/settings.py (apps, DB, REST, JWT)
+•  flush.sh (DB/migrations reset behavior)
+•  messaging/permissions.py (incorrect content causing runtime errors)
+
+```
+
+ANSWER
 ```md
 1. yes, python version `3.11.14` is OK to target;
 2. let's switch to `postgres` as we will dockerize the project in the future, including the database daemon;
@@ -31,6 +91,72 @@ recalculations - weekly (on the website will be shown as weekly trending)
 
 ```
 
+# SECOND MESSAGE
+QUESTION
+```md
+Final clarifications
+Please confirm or choose for each item:
+
+1) README scope
+•  OK to replace README.md with a complete setup guide covering:
+◦  pyenv + poetry setup
+◦  .env variables (Postgres, Redis, Django)
+◦  migrations
+◦  running Django, Celery worker and Celery beat
+◦  formatting/linting/testing
+◦  safe DB reset instructions (including Postgres)
+◦  basic API smoke-test commands
+•  If yes, should we also add a docs/ directory with extended guides, or keep it all in README for now?
+
+2) Reset/flush workflow
+•  Should we replace flush.sh with:
+◦  a safer, interactive script that supports both sqlite and Postgres (detects DB backend and uses env vars for Postgres), and
+◦  options to confirm destructive actions, and
+◦  a separate command to re-seed an admin user?
+•  Or do you prefer a non-interactive reset script as long as it’s safe (rm -f, dropdb if Postgres, etc.)?
+•  For Postgres reset, we’ll rely on env vars: POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST, POSTGRES_PORT. Confirm these names.
+
+3) “Folders” in submissions
+•  Preferred modeling: add a path field (e.g., files stored with a relative path like docs/readme.md) to SubmissionFile to represent directories virtually, instead of a separate Folder model. Is this acceptable?
+•  If not, we can create a simple hierarchical model for folders; confirm preference.
+
+4) Star rating details
+•  Mapping: stars = round_to_half(percentage * 5 / 100). OK?
+•  No votes case (0 up, 0 down): display “No rating yet” rather than 0 stars. OK?
+•  Allow users to change their vote (toggle up/down/clear)? Default would be yes. OK?
+
+5) “Registered-only” visibility
+•  Representation: Add a new visibility choice PUBLIC_REGISTERED alongside PUBLIC, LINK_ONLY, PRIVATE. OK?
+•  Alternatively, use a boolean registered_only flag alongside PUBLIC. Which do you prefer?
+
+6) Blocking semantics
+•  Confirm this is owner-level blocking across all of the owner’s submissions (i.e., if Alice blocks Bob, Bob cannot access any of Alice’s submissions), not per-submission blocking. OK?
+•  We’ll implement this as a Profile.blocked_users M2M to User. OK?
+
+7) Trending and cleanup specifics
+•  Trending algorithm: Use Wilson score to avoid small-sample bias for weekly trending. OK?
+•  Soft-deleted retention before purge: default 30 days, purged weekly. OK?
+
+8) Badges minimal implementation
+•  Start minimally with computed badges:
+◦  admin (is_superuser)
+◦  moderator (is_staff but not superuser)
+◦  regular (default)
+◦  banned/silenced (booleans on Profile)
+•  Later we can expand to a Badge model. OK?
+
+9) Markdown handling
+•  Use markdown for rendering and bleach for sanitization to prevent XSS, storing original Markdown in DB and rendering to safe HTML on read. OK?
+
+10) Dockerization timing
+•  Do you want a first pass docker-compose (web, postgres, redis, celery worker, celery beat) included in this batch, or should we defer containerization to a subsequent step after backend features and tests land?
+
+11) Short link reserved slugs
+•  Should we disallow a reserved list for admin-set custom slugs (e.g., admin, api, s, users, submissions, comments, messages) to avoid conflicts? We will always enforce uniqueness anyway. OK?
+
+```
+
+ANSWER
 ```md
 1. yes, feel free to manage the project's `README.md` file. include the overview, description and overall used technology stack and components, as well as instructions for how to build and run (in the future). outline the project logic and flow including mermaid diagrams showcasing the features of the project. and yes, make the `docs/` directory and let's make detailed documentations written in markdown.
 
@@ -53,11 +179,12 @@ recalculations - weekly (on the website will be shown as weekly trending)
 10. containerization will be handled in the future (no need to dockerize project for now)
 
 11. yes, reserve certain words including API related and future possible words to prevent conflicts in the future. like words "s", "admin", "api", "users", etc.
+
 ```
 
-# PLAN
+# PHASES
 
-```md
+"""
 Plan accepted: 1. Phase 0 — Create a working branch, pin Python 3.11.14, install deps
 Run these commands to prepare the environment. Do not run as root, and do not sudo Poetry commands.
 
@@ -1903,4 +2030,5 @@ UpdateTodos: 16 items
 Acknowledged. I’ll proceed with this backend-first plan and begin implementing in phases.
 
 Do you want me to start by fixing the messaging permission bug and switching settings to Postgres/Redis with a .env scaffold, then add the slug routing and tests?
-```
+
+"""
