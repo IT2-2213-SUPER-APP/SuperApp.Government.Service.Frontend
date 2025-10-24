@@ -1,6 +1,7 @@
 # PERSONAL
 prompt.md
 context/
+*:Zone.Identifier
 
 # PYTHON
 __pycache__/
